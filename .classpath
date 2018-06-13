@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.7.0_60"/>
+	<classpathentry kind="lib" path="cplex.jar"/>
+	<classpathentry kind="lib" path="junit-4.4.jar"/>
+	<classpathentry kind="lib" path="jxl.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
