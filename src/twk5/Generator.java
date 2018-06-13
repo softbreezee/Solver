@@ -372,6 +372,15 @@ public class Generator {
 			}
 		}
 		br.close();
+		
+		for (int i = 0; i < stockNum + numofTasks; i++) {
+			for (int j = 0; j < stockNum + numofTasks; j++) {
+				System.out.print(myRound(tij[i][j],2)+"\t");
+			}
+			System.out.println();
+		}
+		
+		
 	}
 
 }

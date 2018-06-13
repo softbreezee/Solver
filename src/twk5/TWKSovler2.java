@@ -2,15 +2,9 @@ package twk5;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.text.Normalizer.Form;
 import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Test;
@@ -18,12 +12,8 @@ import org.junit.Test;
 import ilog.concert.IloException;
 import ilog.concert.IloIntVar;
 import ilog.concert.IloLinearNumExpr;
-import ilog.concert.IloNumExpr;
 import ilog.concert.IloNumVar;
 import ilog.cplex.IloCplex;
-import ref.ComputeUtil;
-import ref.Data;
-import twt2.RandomCreate;
 
 /**
  * 
@@ -40,13 +30,9 @@ public class TWKSovler2 {
 	 * 数据处理
 	 */
 	double[][] tij;
-	// c1 = 10;
-	// c2 = 1;
-	// c3 = 0;
-	double timePeriod = 16;
+	double timePeriod = 24;
 	int tasks ;
 	int stocks ;
-	int[] trucks ;
 	int[] stockTrucks;
 	double[] loadTime ;
 	double tMax;
@@ -66,10 +52,8 @@ public class TWKSovler2 {
 		t.stocks = g.stockNum;
 		t.loadTime = g.packageTime;
 		t.tij = g.tij;
-		//车量
-		t.trucks = new int[3];
 		//
-		int[]  arr ={3,2};
+		int[]  arr ={5,2};
 		t.stockTrucks =arr; 
 		t.tMax =g.timePeriod;
 
@@ -82,7 +66,6 @@ public class TWKSovler2 {
 		
 	}
 
-	// Data d;
 	/**
 	 * 1、从d中取出的任务应该是子任务的数量 2、d.driveTime没有处理，应该是定义的弧转换时间
 	 * 3、假设4个客户任务（第一阶段任务与第二阶段任务）的对应关系是 0->4 1->5 2->6 3->7 4、
@@ -203,58 +186,36 @@ public class TWKSovler2 {
 				}
 			}
 
+			int M = 1000;
 			// 对于司机的工作时间约束
-			int[] arrC = new int[tasks];
-			for (int i = 0; i < tasks; i++) {
+			int[] arrC = new int[stocks];
+			for (int i = 0; i < stocks; i++) {
 				arrC[i] = i;
 			}
-
-			Set<Set<Integer>> subSet = ComputeUtil.getSubSet(arrC);// 包含空集
+			Set<Set<Integer>> subSet = getSubSet(arrC);// 包含空集
 			for (Set<Integer> s : subSet) {
 				if (s.size() != 0) {
 					// 几个集合几个约束
-					IloNumExpr[] z00 = new IloNumExpr[s.size()];
-					IloNumExpr[] z11 = new IloNumExpr[s.size()];
-					IloNumExpr[] z22 = new IloNumExpr[s.size()];
-					int sIndex = 0;
-					for (int indexInS : s) {
-						IloNumExpr[] z0 = new IloNumExpr[stocks];
-						IloNumExpr[] z1 = new IloNumExpr[stocks];
+					IloLinearNumExpr expr0 = cplex.linearNumExpr();
+					IloLinearNumExpr expr1 = cplex.linearNumExpr();
+					for (Integer indexInS : s) {
 						for (int i = 0; i < stocks; i++) {
-							z0[i] = cplex.sum(Z[indexInS + stocks][i], cplex
-									.prod(tij[indexInS + stocks][i], X[indexInS
-											+ stocks][i]));
-
-							z1[i] = Z[i][indexInS + stocks];
-
+							expr0.addTerm(1.0,Z[indexInS+stocks][i]);
+							expr0.addTerm(tij[indexInS + stocks][i], X[indexInS+ stocks][i]);
 						}
-						IloNumExpr[] z2 = new IloNumExpr[s.size()];
-						int index = 0;
+						for (int i = 0; i < stocks; i++) {
+							expr0.addTerm(-1.0,Z[i][indexInS+stocks]);
+						}
 						for (int inInS : s) {
-							z2[index] = X[indexInS + stocks][inInS + stocks];
-							index++;
+							expr1.addTerm(M, X[indexInS + stocks][inInS + stocks]);
 						}
-
-						z00[sIndex] = cplex.sum(z0);
-						z11[sIndex] = cplex.sum(z1);
-						z22[sIndex] = cplex.sum(z2);
-						sIndex++;
-
 					}
-
-					cplex.addLe(
-							cplex.diff(cplex.sum(z00), cplex.sum(z11)),
-							cplex.sum(
-									tMax,
-									cplex.prod(
-											Integer.MAX_VALUE,
-											cplex.diff(s.size() - 1,
-													cplex.sum(z11)))));
+					cplex.ifThen(cplex.eq(s.size()-1, expr1), cplex.le(expr0, tMax));
+//					cplex.addLe(expr, tMax+M*(s.size()-1));
 				}
 				// 添加
 			}
 
-			int M = Integer.MAX_VALUE;
 			// 对zij的约束
 			for (int i = 0; i < stocks; i++) {
 				for (int j = 0; j < tasks; j++) {
@@ -266,32 +227,31 @@ public class TWKSovler2 {
 
 			// 定义目标函数
 			IloLinearNumExpr exprObj = cplex.linearNumExpr(); //
-			IloLinearNumExpr exprObj1 = cplex.linearNumExpr(); 
-//			for (int i = 0; i < tasks + stocks; i++) {
-//				for (int j = 0; j < tasks + stocks; j++) {
+			for (int i = 0; i < tasks + stocks; i++) {
+				for (int j = 0; j < tasks + stocks; j++) {
+					if (j != i) {
+						exprObj.addTerm(tij[i][j], X[i][j]);
+						
+					}
+				}
+			}
+//			for (int i = stocks; i < tasks+stocks; i++) {
+//				for (int j = 0; j <stocks; j++) {
 //					if (j != i) {
-////						exprObj.addTerm(tij[i][j], X[i][j]);
 //						
+//						exprObj.addTerm(1.0, Z[i][j]);
+//						exprObj.addTerm(tij[i][j],X[i][j]);
 //					}
 //				}
 //			}
-			for (int i = stocks; i < tasks; i++) {
-				for (int j = 0; j <stocks; j++) {
-					if (j != i) {
-						
-						exprObj.addTerm(1.0, Z[i][j]);
-						exprObj.addTerm(tij[i][j],X[i][j]);
-					}
-				}
-			}
-			for (int i = 0; i < stocks; i++) {
-				for (int j = stocks; j <stocks+tasks; j++) {
-					if (j != i) {
-						
-						exprObj.addTerm(-1.0, Z[i][j]);
-					}
-				}
-			}
+//			for (int i = 0; i < stocks; i++) {
+//				for (int j = stocks; j <stocks+tasks; j++) {
+//					if (j != i) {
+//						
+//						exprObj.addTerm(-1.0, Z[i][j]);
+//					}
+//				}
+//			}
 
 
 			cplex.addMinimize(exprObj);
@@ -421,4 +381,27 @@ public class TWKSovler2 {
 				.doubleValue();
 	}
 
+	// 求子集的方法
+	public static Set<Set<Integer>> getSubSet(int[] set) {
+		Set<Set<Integer>> result = new HashSet<Set<Integer>>(); // 用来存放子集的集合，如{{},{1},{2},{1,2}}
+		int length = set.length;
+		int num = length == 0 ? 0 : 1 << (length); // 2的n次方，若集合set为空，num为0；若集合set有4个元素，那么num为16.
+
+		// 从0到2^n-1（[00...00]到[11...11]）
+		for (int i = 0; i < num; i++) {
+			Set<Integer> subSet = new HashSet<Integer>();
+
+			int index = i;
+			for (int j = 0; j < length; j++) {
+				if ((index & 1) == 1) { // 每次判断index最低位是否为1，为1则把集合set的第j个元素放到子集中
+					subSet.add(set[j]);
+				}
+				index >>= 1; // 右移一位
+			}
+
+			result.add(subSet); // 把子集存储起来
+		}
+		return result;
+	}
+	
 }
