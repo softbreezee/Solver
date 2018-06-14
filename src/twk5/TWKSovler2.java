@@ -30,7 +30,7 @@ public class TWKSovler2 {
 	 * 数据处理
 	 */
 	double[][] tij;
-	double timePeriod = 24;
+	double timePeriod = 16;
 	int tasks ;
 	int stocks ;
 	int[] stockTrucks;
@@ -53,7 +53,7 @@ public class TWKSovler2 {
 		t.loadTime = g.packageTime;
 		t.tij = g.tij;
 		//
-		int[]  arr ={5,2};
+		int[]  arr ={1,2};
 		t.stockTrucks =arr; 
 		t.tMax =g.timePeriod;
 
@@ -83,7 +83,13 @@ public class TWKSovler2 {
 			IloCplex cplex = new IloCplex();
 
 			/* 此处删去对cplex的设置及cplex输出为一个cvs文件 */
-
+			cplex.setParam(IloCplex.IntParam.MIPEmphasis, 0);
+			cplex.setParam(IloCplex.DoubleParam.TiLim, 3600);
+			cplex.setParam(IloCplex.DoubleParam.WorkMem, 4096);
+			cplex.setParam(IloCplex.IntParam.NodeFileInd, 3);
+			
+			
+			
 			// 和文章中tij表格格式一致,这里的任务数量应该是【子】任务数量
 			IloIntVar[][] X = new IloIntVar[tasks + stocks][tasks + stocks];
 			// IloNumVar[][] xij = new IloNumVar[numofTasks + 1][numofTasks +
@@ -192,29 +198,29 @@ public class TWKSovler2 {
 			for (int i = 0; i < stocks; i++) {
 				arrC[i] = i;
 			}
-			Set<Set<Integer>> subSet = getSubSet(arrC);// 包含空集
-			for (Set<Integer> s : subSet) {
-				if (s.size() != 0) {
-					// 几个集合几个约束
-					IloLinearNumExpr expr0 = cplex.linearNumExpr();
-					IloLinearNumExpr expr1 = cplex.linearNumExpr();
-					for (Integer indexInS : s) {
-						for (int i = 0; i < stocks; i++) {
-							expr0.addTerm(1.0,Z[indexInS+stocks][i]);
-							expr0.addTerm(tij[indexInS + stocks][i], X[indexInS+ stocks][i]);
-						}
-						for (int i = 0; i < stocks; i++) {
-							expr0.addTerm(-1.0,Z[i][indexInS+stocks]);
-						}
-						for (int inInS : s) {
-							expr1.addTerm(M, X[indexInS + stocks][inInS + stocks]);
-						}
-					}
-					cplex.ifThen(cplex.eq(s.size()-1, expr1), cplex.le(expr0, tMax));
-//					cplex.addLe(expr, tMax+M*(s.size()-1));
-				}
-				// 添加
-			}
+//			Set<Set<Integer>> subSet = getSubSet(arrC);// 包含空集
+//			for (Set<Integer> s : subSet) {
+//				if (s.size() != 0) {
+//					// 几个集合几个约束
+//					IloLinearNumExpr expr0 = cplex.linearNumExpr();
+//					IloLinearNumExpr expr1 = cplex.linearNumExpr();
+//					for (Integer indexInS : s) {
+//						for (int i = 0; i < stocks; i++) {
+//							expr0.addTerm(1.0,Z[indexInS+stocks][i]);
+//							expr0.addTerm(tij[indexInS + stocks][i], X[indexInS+ stocks][i]);
+//						}
+//						for (int i = 0; i < stocks; i++) {
+//							expr0.addTerm(-1.0,Z[i][indexInS+stocks]);
+//						}
+//						for (int inInS : s) {
+//							expr1.addTerm(M, X[indexInS + stocks][inInS + stocks]);
+//						}
+//					}
+//					cplex.ifThen(cplex.eq(s.size()-1, expr1), cplex.le(expr0, tMax));
+////					cplex.addLe(expr, tMax+M*(s.size()-1));
+//				}
+//				// 添加
+//			}
 
 			// 对zij的约束
 			for (int i = 0; i < stocks; i++) {
@@ -227,6 +233,14 @@ public class TWKSovler2 {
 
 			// 定义目标函数
 			IloLinearNumExpr exprObj = cplex.linearNumExpr(); //
+			for (int i = 0; i <stocks; i++) {
+				for (int j = stocks; j < tasks + stocks; j++) {
+					if (j != i) {
+						exprObj.addTerm(10, X[i][j]);
+						
+					}
+				}
+			}
 			for (int i = 0; i < tasks + stocks; i++) {
 				for (int j = 0; j < tasks + stocks; j++) {
 					if (j != i) {
@@ -352,7 +366,7 @@ public class TWKSovler2 {
 				System.out.print("\rxij:\r");
 				for (int i = 0; i < sxij.length; i++) {
 					for (int j = 0; j < sxij[0].length; j++) {
-						System.out.print(sxij[i][j] + " ");
+						System.out.print(sxij[i][j]+"("+szij[i][j] + "\t");
 					}
 					System.out.print("\r");
 				}

@@ -16,7 +16,7 @@ import java.util.Arrays;
 import org.junit.Test;
 
 /**
- * xijk模型
+ * xijk模型,与原模型等价，未完成，还有目标的确定，然后实验
  * 对车辆的约束不能线性化
  * @author Leon
  * 
@@ -98,13 +98,6 @@ public class TWK3_2 {
 				}
 			}
 
-			// xij连续，松弛版本
-			// for (int i = 0; i < xij.length; i++) {
-			// for (int j = 0; j < xij[0].length; j++) {
-			// xij[i][j] = cplex.numVar(0,1,"X" + i + j);
-			// }
-			// }
-//			double[] arr1 = new double[]
 			
 			
 //			for(int k = 0;k<trucks.length;k++){
@@ -129,17 +122,17 @@ public class TWK3_2 {
 //			}
 			// 定义约束
 			// 堆场车辆约束
-			for (int i = 0; i < stocks; i++) {
-				IloLinearNumExpr exprCar0 = cplex.linearNumExpr();// 创建一个约束表达式
-				for(int k = 0;k<trucks;k++){
-					for (int j = stocks; j < tasks + stocks; j++) {
-						if (i != j) {
-							exprCar0.addTerm(1.0, X[i][j][k]);
-						}
-					}
-				}
-				cplex.addLe(exprCar0, stockTrucks[i]);// 添加约束表达式
-			}
+//			for (int i = 0; i < stocks; i++) {
+//				IloLinearNumExpr exprCar0 = cplex.linearNumExpr();// 创建一个约束表达式
+//				for(int k = 0;k<trucks;k++){
+//					for (int j = stocks; j < tasks + stocks; j++) {
+//						if (i != j) {
+//							exprCar0.addTerm(1.0, X[i][j][k]);
+//						}
+//					}
+//				}
+//				cplex.addLe(exprCar0, stockTrucks[i]);// 添加约束表达式
+//			}
 			
 			//一辆车只能从一个堆场出来，只能返回一个堆场
 			for(int k = 0;k<trucks;k++){
